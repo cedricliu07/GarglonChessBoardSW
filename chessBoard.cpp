@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdlib>
 using namespace std;
 
 
@@ -18,7 +19,7 @@ class ChessBoard;
 class ChessPiece {
   public:
     PieceType piece;
-    bool color;  // true = white, false = black
+    bool color;
     int row;
     int col;
     
@@ -32,6 +33,9 @@ class ChessPiece {
 class ChessBoard {
   public:
     ChessPiece board[8][8];
+    int enPassantCol;
+    int enPassantRow;
+    bool enPassantColor;
     ChessBoard();
     void reset();
     void setPiece(int row, int col, PieceType piece, bool color);
@@ -120,6 +124,21 @@ void ChessPiece::calculateMoves(ChessBoard* board, int moves[][2], int& numMoves
             }
           }
         }
+        
+        if (board->enPassantCol >= 0 && board->enPassantColor != color) {
+          int captureDirection = board->enPassantColor ? 1 : -1;
+          int movedPawnRow = board->enPassantRow - captureDirection;
+          
+          if (row == movedPawnRow && (col == board->enPassantCol - 1 || col == board->enPassantCol + 1)) {
+            int enPassantTargetRow = row + direction;
+            int enPassantTargetCol = board->enPassantCol;
+            if (enPassantTargetRow >= 0 && enPassantTargetRow < 8) {
+              moves[numMoves][0] = enPassantTargetRow;
+              moves[numMoves][1] = enPassantTargetCol;
+              numMoves++;
+            }
+          }
+        }
       }
       break;
       
@@ -185,7 +204,6 @@ void ChessPiece::calculateMoves(ChessBoard* board, int moves[][2], int& numMoves
               moves[numMoves][1] = newCol;
               numMoves++;
             } else {
-              
               if (target.color != color) {
                 moves[numMoves][0] = newRow;
                 moves[numMoves][1] = newCol;
@@ -257,6 +275,8 @@ ChessBoard::ChessBoard() {
       board[i][j] = ChessPiece();
     }
   }
+  enPassantCol = -1;
+  enPassantRow = -1;
 }
 
 void ChessBoard::reset() {
@@ -265,6 +285,8 @@ void ChessBoard::reset() {
       board[i][j] = ChessPiece();
     }
   }
+  enPassantCol = -1;
+  enPassantRow = -1;
 
   board[0][0] = ChessPiece(ROOK, false, 0, 0);
   board[0][1] = ChessPiece(KNIGHT, false, 0, 1);
@@ -352,9 +374,14 @@ bool ChessBoard::moveTo(int fromRow, int fromCol, int toRow, int toCol) {
   
 
   bool isValidMove = false;
+  bool isEnPassant = false;
   for(int i = 0; i < numMoves; i++) {
     if (moves[i][0] == toRow && moves[i][1] == toCol) {
       isValidMove = true;
+      if (sourcePiece.piece == PAWN && enPassantCol >= 0 && 
+          toCol == enPassantCol && toRow == enPassantRow) {
+        isEnPassant = true;
+      }
       break;
     }
   }
@@ -363,6 +390,42 @@ bool ChessBoard::moveTo(int fromRow, int fromCol, int toRow, int toCol) {
     return false;  
   }
   
+  if (isEnPassant) {
+    int captureDirection = sourcePiece.color ? -1 : 1;
+    int capturedPawnRow = toRow - captureDirection;
+    board[capturedPawnRow][enPassantCol] = ChessPiece();
+  }
+  
+ 
+  int newEnPassantCol = -1;
+  int newEnPassantRow = -1;
+  bool newEnPassantColor = false;
+  if (sourcePiece.piece == PAWN) {
+    int startRow = sourcePiece.color ? 6 : 1;
+    int rowDiff = toRow > fromRow ? toRow - fromRow : fromRow - toRow;
+    if (fromRow == startRow && rowDiff == 2) {
+      newEnPassantCol = fromCol;
+      int captureDirection = sourcePiece.color ? 1 : -1;
+      newEnPassantRow = toRow + captureDirection;
+      newEnPassantColor = sourcePiece.color;
+    }
+  }
+  
+  enPassantCol = newEnPassantCol;
+  enPassantRow = newEnPassantRow;
+  enPassantColor = newEnPassantColor;
+  
+  if (newEnPassantCol == -1) {
+    enPassantCol = -1;
+    enPassantRow = -1;
+  }
+  
+  if (sourcePiece.piece == PAWN) {
+    int promotionRow = sourcePiece.color ? 0 : 7;
+    if (toRow == promotionRow) {
+      sourcePiece.piece = QUEEN;
+    }
+  }
   
   sourcePiece.moveTo(toRow, toCol);
   
@@ -375,6 +438,7 @@ bool ChessBoard::moveTo(int fromRow, int fromCol, int toRow, int toCol) {
   return true;  
 }
 
+#ifndef TEST_MODE
 int main() {
   ChessBoard board;
   board.reset();
@@ -484,4 +548,5 @@ int main() {
   
   return 0;
 }
+#endif
 
