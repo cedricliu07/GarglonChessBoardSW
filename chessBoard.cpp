@@ -7,16 +7,16 @@ ChessPiece::ChessPiece() {
   col = 0;
 }
 
-ChessPiece::ChessPiece(PieceType p, bool pieceColor, int r, int col) {
+ChessPiece::ChessPiece(PieceType p, bool pieceColor, int r, int c) {
   piece = p;
   color = pieceColor;
   row = r;
-  col = col;
+  col = c;
 }
 
-void ChessPiece::moveTo(int r, int col) {
+void ChessPiece::moveTo(int r, int c) {
   row = r;
-  col = col;
+  col = c;
 }
 
 void ChessPiece::calculateMoves(ChessBoard* board, int moves[][2], int& numMoves) {
@@ -208,6 +208,7 @@ ChessBoard::ChessBoard() {
   }
   enPassantCol = -1;
   enPassantRow = -1;
+  enPassantColor = false;
 }
 
 void ChessBoard::reset() {
